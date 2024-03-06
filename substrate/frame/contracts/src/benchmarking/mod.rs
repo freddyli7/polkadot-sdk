@@ -2700,7 +2700,7 @@ mod benchmarks {
 
 	// We load `i64` values from random linear memory locations and store the loaded
 	// values back into yet another random linear memory location.
-	// The random addresses are uniformely distributed across the entire span of the linear memory.
+	// The random addresses are uniformly distributed across the entire span of the linear memory.
 	// We do this to enforce random memory accesses which are particularly expensive.
 	//
 	// The combination of this computation is our weight base `w_base`.
@@ -2708,7 +2708,7 @@ mod benchmarks {
 	fn instr_i64_load_store(r: Linear<0, { INSTR_BENCHMARK_RUNS }>) -> Result<(), BenchmarkError> {
 		use rand::prelude::*;
 
-		// We do not need to be secure here. Fixed seed allows for determinstic results.
+		// We do not need to be secure here. Fixed seed allows for deterministic results.
 		let mut rng = rand_pcg::Pcg32::seed_from_u64(8446744073709551615);
 
 		let memory = ImportedMemory::max::<T>();
