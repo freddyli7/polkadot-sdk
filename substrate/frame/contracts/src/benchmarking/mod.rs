@@ -1780,7 +1780,7 @@ mod benchmarks {
 
 	// We transfer to unique accounts.
 	#[benchmark]
-	fn seal_transfer(r: Linear<0, { API_BENCHMARK_RUNS }>) -> Result<(), BenchmarkError> {
+	fn seal_transfer(r: Linear<0, API_BENCHMARK_RUNS>) -> Result<(), BenchmarkError> {
 		let accounts =
 			(0..r).map(|i| account::<T::AccountId>("receiver", i, 0)).collect::<Vec<_>>();
 		let account_len = accounts.get(0).map(|i| i.encode().len()).unwrap_or(0);
@@ -2221,7 +2221,7 @@ mod benchmarks {
 
 	// Only the overhead of calling the function itself with minimal arguments.
 	#[benchmark]
-	fn seal_hash_keccak_256(r: Linear<0, { API_BENCHMARK_RUNS }>) -> Result<(), BenchmarkError> {
+	fn seal_hash_keccak_256(r: Linear<0, API_BENCHMARK_RUNS>) -> Result<(), BenchmarkError> {
 		let instance =
 			Contract::<T>::new(WasmModule::hasher("seal_hash_keccak_256", r, 0), vec![])?;
 		let origin = RawOrigin::Signed(instance.caller.clone());
@@ -2245,7 +2245,7 @@ mod benchmarks {
 
 	// Only the overhead of calling the function itself with minimal arguments.
 	#[benchmark]
-	fn seal_hash_blake2_256(r: Linear<0, { API_BENCHMARK_RUNS }>) -> Result<(), BenchmarkError> {
+	fn seal_hash_blake2_256(r: Linear<0, API_BENCHMARK_RUNS>) -> Result<(), BenchmarkError> {
 		let instance =
 			Contract::<T>::new(WasmModule::hasher("seal_hash_blake2_256", r, 0), vec![])?;
 		let origin = RawOrigin::Signed(instance.caller.clone());
@@ -2269,7 +2269,7 @@ mod benchmarks {
 
 	// Only the overhead of calling the function itself with minimal arguments.
 	#[benchmark]
-	fn seal_hash_blake2_128(r: Linear<0, { API_BENCHMARK_RUNS }>) -> Result<(), BenchmarkError> {
+	fn seal_hash_blake2_128(r: Linear<0, API_BENCHMARK_RUNS>) -> Result<(), BenchmarkError> {
 		let instance =
 			Contract::<T>::new(WasmModule::hasher("seal_hash_blake2_128", r, 0), vec![])?;
 		let origin = RawOrigin::Signed(instance.caller.clone());
@@ -2483,7 +2483,7 @@ mod benchmarks {
 	}
 
 	#[benchmark]
-	fn seal_set_code_hash(r: Linear<0, { API_BENCHMARK_RUNS }>) -> Result<(), BenchmarkError> {
+	fn seal_set_code_hash(r: Linear<0, API_BENCHMARK_RUNS>) -> Result<(), BenchmarkError> {
 		let code_hashes = (0..r)
 			.map(|i| {
 				let new_code = WasmModule::<T>::dummy_with_bytes(i);
@@ -2621,7 +2621,7 @@ mod benchmarks {
 	}
 
 	#[benchmark]
-	fn seal_reentrance_count(r: Linear<0, { API_BENCHMARK_RUNS }>) -> Result<(), BenchmarkError> {
+	fn seal_reentrance_count(r: Linear<0, API_BENCHMARK_RUNS>) -> Result<(), BenchmarkError> {
 		let code = WasmModule::<T>::from(ModuleDefinition {
 			memory: Some(ImportedMemory::max::<T>()),
 			imported_functions: vec![ImportedFunction {
@@ -2642,7 +2642,7 @@ mod benchmarks {
 
 	#[benchmark]
 	fn seal_account_reentrance_count(
-		r: Linear<0, { API_BENCHMARK_RUNS }>,
+		r: Linear<0, API_BENCHMARK_RUNS>,
 	) -> Result<(), BenchmarkError> {
 		let dummy_code = WasmModule::<T>::dummy_with_bytes(0);
 		let accounts = (0..r)
@@ -2677,9 +2677,7 @@ mod benchmarks {
 	}
 
 	#[benchmark]
-	fn seal_instantiation_nonce(
-		r: Linear<0, { API_BENCHMARK_RUNS }>,
-	) -> Result<(), BenchmarkError> {
+	fn seal_instantiation_nonce(r: Linear<0, API_BENCHMARK_RUNS>) -> Result<(), BenchmarkError> {
 		let code = WasmModule::<T>::from(ModuleDefinition {
 			memory: Some(ImportedMemory::max::<T>()),
 			imported_functions: vec![ImportedFunction {
@@ -2705,7 +2703,7 @@ mod benchmarks {
 	//
 	// The combination of this computation is our weight base `w_base`.
 	#[benchmark]
-	fn instr_i64_load_store(r: Linear<0, { INSTR_BENCHMARK_RUNS }>) -> Result<(), BenchmarkError> {
+	fn instr_i64_load_store(r: Linear<0, INSTR_BENCHMARK_RUNS>) -> Result<(), BenchmarkError> {
 		use rand::prelude::*;
 
 		// We do not need to be secure here. Fixed seed allows for deterministic results.
@@ -2748,7 +2746,7 @@ mod benchmarks {
 	// This is no benchmark. It merely exist to have an easy way to pretty print the currently
 	// configured `Schedule` during benchmark development. Check the README on how to print this.
 	#[benchmark(extra)]
-	fn print_schedule() {
+	fn print_schedule() -> Result<(), BenchmarkError> {
 		let max_weight = <T as frame_system::Config>::BlockWeights::get().max_block;
 		let (weight_per_key, key_budget) = ContractInfo::<T>::deletion_budget(max_weight);
 		let schedule = T::Schedule::get();
@@ -2760,6 +2758,8 @@ mod benchmarks {
 		");
 		#[block]
 		{}
+
+		Err(BenchmarkError::Skip)
 	}
 
 	impl_benchmark_test_suite!(
