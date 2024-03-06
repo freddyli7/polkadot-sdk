@@ -16,7 +16,6 @@
 // limitations under the License.
 
 //! Benchmarks for the contracts pallet
-#![allow(unused)]
 #![cfg(feature = "runtime-benchmarks")]
 
 mod code;
@@ -347,8 +346,6 @@ mod benchmarks {
 		let latest_version = LATEST_MIGRATION_VERSION;
 		StorageVersion::new(latest_version - 2).put::<Pallet<T>>();
 		<Migration<T, false> as frame_support::traits::OnRuntimeUpgrade>::on_runtime_upgrade();
-		let caller: T::AccountId = whitelisted_caller();
-		let origin = RawOrigin::Signed(caller.clone());
 
 		#[extrinsic_call]
 		_(RawOrigin::Signed(whitelisted_caller()), Weight::MAX);
@@ -414,11 +411,10 @@ mod benchmarks {
 			vec![],
 		)?;
 		let value = Pallet::<T>::min_balance();
-		let origin = RawOrigin::Signed(instance.caller.clone());
 		let callee = instance.addr;
 
 		#[extrinsic_call]
-		call(RawOrigin::Signed(whitelisted_caller()), callee, value, Weight::MAX, None, vec![]);
+		call(RawOrigin::Signed(instance.caller.clone()), callee, value, Weight::MAX, None, vec![]);
 
 		Ok(())
 	}
@@ -477,12 +473,11 @@ mod benchmarks {
 		let caller = whitelisted_caller();
 		T::Currency::set_balance(&caller, caller_funding::<T>());
 		let WasmModule { code, hash, .. } = WasmModule::<T>::dummy();
-		let origin = RawOrigin::Signed(caller.clone());
 		let addr = Contracts::<T>::contract_address(&caller, &hash, &input, &salt);
 		Contracts::<T>::store_code_raw(code, caller.clone())?;
 
 		#[extrinsic_call]
-		_(RawOrigin::Signed(whitelisted_caller()), value, Weight::MAX, None, hash, input, salt);
+		_(RawOrigin::Signed(caller.clone()), value, Weight::MAX, None, hash, input, salt);
 
 		let deposit =
 			T::Currency::balance_on_hold(&HoldReason::StorageDepositReserve.into(), &addr);
@@ -637,8 +632,6 @@ mod benchmarks {
 		let accounts = (0..r).map(|n| account::<T::AccountId>("account", n, 0)).collect::<Vec<_>>();
 		let account_len = accounts.get(0).map(|i| i.encode().len()).unwrap_or(0);
 		let accounts_bytes = accounts.iter().flat_map(|a| a.encode()).collect::<Vec<_>>();
-		let accounts_len = accounts_bytes.len();
-		let pages = code::max_pages::<T>();
 		let code = WasmModule::<T>::from(ModuleDefinition {
 			memory: Some(ImportedMemory::max::<T>()),
 			imported_functions: vec![ImportedFunction {
@@ -1292,7 +1285,7 @@ mod benchmarks {
 		let info = instance.info()?;
 		for key in keys {
 			info.write(
-				&Key::<T>::try_from_var(key).map_err(|e| "Key has wrong length")?,
+				&Key::<T>::try_from_var(key).map_err(|_| "Key has wrong length")?,
 				Some(vec![]),
 				None,
 				false,
@@ -1334,7 +1327,7 @@ mod benchmarks {
 		let instance = Contract::<T>::new(code, vec![])?;
 		let info = instance.info()?;
 		info.write(
-			&Key::<T>::try_from_var(key).map_err(|e| "Key has wrong length")?,
+			&Key::<T>::try_from_var(key).map_err(|_| "Key has wrong length")?,
 			Some(vec![]),
 			None,
 			false,
@@ -1376,7 +1369,7 @@ mod benchmarks {
 		let instance = Contract::<T>::new(code, vec![])?;
 		let info = instance.info()?;
 		info.write(
-			&Key::<T>::try_from_var(key).map_err(|e| "Key has wrong length")?,
+			&Key::<T>::try_from_var(key).map_err(|_| "Key has wrong length")?,
 			Some(vec![42u8; n as usize]),
 			None,
 			false,
@@ -1427,7 +1420,7 @@ mod benchmarks {
 		let info = instance.info()?;
 		for key in keys {
 			info.write(
-				&Key::<T>::try_from_var(key).map_err(|e| "Key has wrong length")?,
+				&Key::<T>::try_from_var(key).map_err(|_| "Key has wrong length")?,
 				Some(vec![]),
 				None,
 				false,
@@ -1468,7 +1461,7 @@ mod benchmarks {
 		let instance = Contract::<T>::new(code, vec![])?;
 		let info = instance.info()?;
 		info.write(
-			&Key::<T>::try_from_var(key).map_err(|e| "Key has wrong length")?,
+			&Key::<T>::try_from_var(key).map_err(|_| "Key has wrong length")?,
 			Some(vec![42u8; n as usize]),
 			None,
 			false,
@@ -1525,7 +1518,7 @@ mod benchmarks {
 		let info = instance.info()?;
 		for key in keys {
 			info.write(
-				&Key::<T>::try_from_var(key).map_err(|e| "Key has wrong length")?,
+				&Key::<T>::try_from_var(key).map_err(|_| "Key has wrong length")?,
 				Some(vec![]),
 				None,
 				false,
@@ -1574,7 +1567,7 @@ mod benchmarks {
 		let instance = Contract::<T>::new(code, vec![])?;
 		let info = instance.info()?;
 		info.write(
-			&Key::<T>::try_from_var(key).map_err(|e| "Key has wrong length")?,
+			&Key::<T>::try_from_var(key).map_err(|_| "Key has wrong length")?,
 			Some(vec![42u8; n as usize]),
 			None,
 			false,
@@ -1601,7 +1594,6 @@ mod benchmarks {
 			})
 			.collect::<Vec<_>>();
 		let key_bytes = keys.iter().flatten().cloned().collect::<Vec<_>>();
-		let key_bytes_len = key_bytes.len();
 		let code = WasmModule::<T>::from(ModuleDefinition {
 			memory: Some(ImportedMemory::max::<T>()),
 			imported_functions: vec![ImportedFunction {
@@ -1626,7 +1618,7 @@ mod benchmarks {
 		let info = instance.info()?;
 		for key in keys {
 			info.write(
-				&Key::<T>::try_from_var(key).map_err(|e| "Key has wrong length")?,
+				&Key::<T>::try_from_var(key).map_err(|_| "Key has wrong length")?,
 				Some(vec![]),
 				None,
 				false,
@@ -1667,7 +1659,7 @@ mod benchmarks {
 		let instance = Contract::<T>::new(code, vec![])?;
 		let info = instance.info()?;
 		info.write(
-			&Key::<T>::try_from_var(key).map_err(|e| "Key has wrong length")?,
+			&Key::<T>::try_from_var(key).map_err(|_| "Key has wrong length")?,
 			Some(vec![42u8; n as usize]),
 			None,
 			false,
@@ -1724,7 +1716,7 @@ mod benchmarks {
 		let info = instance.info()?;
 		for key in keys {
 			info.write(
-				&Key::<T>::try_from_var(key).map_err(|e| "Key has wrong length")?,
+				&Key::<T>::try_from_var(key).map_err(|_| "Key has wrong length")?,
 				Some(vec![]),
 				None,
 				false,
@@ -1773,7 +1765,7 @@ mod benchmarks {
 		let instance = Contract::<T>::new(code, vec![])?;
 		let info = instance.info()?;
 		info.write(
-			&Key::<T>::try_from_var(key).map_err(|e| "Key has wrong length")?,
+			&Key::<T>::try_from_var(key).map_err(|_| "Key has wrong length")?,
 			Some(vec![42u8; n as usize]),
 			None,
 			false,
@@ -1931,7 +1923,6 @@ mod benchmarks {
 			.collect::<Result<Vec<_>, &'static str>>()?;
 		let hash_len = hashes.get(0).map(|x| x.encode().len()).unwrap_or(0);
 		let hashes_bytes = hashes.iter().flat_map(|x| x.encode()).collect::<Vec<_>>();
-		let hashes_len = hashes_bytes.len();
 		let hashes_offset = 0;
 
 		let code = WasmModule::<T>::from(ModuleDefinition {
@@ -2143,7 +2134,6 @@ mod benchmarks {
 		s: Linear<0, { (code::max_pages::<T>() - 1) * 64 * 1024 }>,
 	) -> Result<(), BenchmarkError> {
 		let callee_code = WasmModule::<T>::dummy();
-		let hash = callee_code.hash;
 		let hash_bytes = callee_code.hash.encode();
 		let hash_len = hash_bytes.len();
 		let caller = whitelisted_caller();
@@ -2359,7 +2349,7 @@ mod benchmarks {
 		let message_len = message.len() as i32;
 		let key_type = sp_core::crypto::KeyTypeId(*b"code");
 		let sig_params = (0..r)
-			.flat_map(|i| {
+			.flat_map(|_| {
 				let pub_key = sp_io::crypto::sr25519_generate(key_type, None);
 				let sig = sp_io::crypto::sr25519_sign(key_type, &pub_key, &message)
 					.expect("Generates signature");
@@ -2412,7 +2402,7 @@ mod benchmarks {
 		let message_hash = sp_io::hashing::blake2_256("Hello world".as_bytes());
 		let key_type = sp_core::crypto::KeyTypeId(*b"code");
 		let signatures = (0..r)
-			.map(|i| {
+			.map(|_| {
 				let pub_key = sp_io::crypto::ecdsa_generate(key_type, None);
 				let sig = sp_io::crypto::ecdsa_sign_prehashed(key_type, &pub_key, &message_hash)
 					.expect("Generates signature");
@@ -2505,7 +2495,6 @@ mod benchmarks {
 			.collect::<Result<Vec<_>, &'static str>>()?;
 		let code_hash_len = code_hashes.get(0).map(|x| x.encode().len()).unwrap_or(0);
 		let code_hashes_bytes = code_hashes.iter().flat_map(|x| x.encode()).collect::<Vec<_>>();
-		let code_hashes_len = code_hashes_bytes.len();
 
 		let code = WasmModule::<T>::from(ModuleDefinition {
 			memory: Some(ImportedMemory::max::<T>()),
