@@ -22,7 +22,7 @@ use super::{
 	BridgeGrandpaWococoInstance, DeliveryRewardInBalance, ParachainInfo, ParachainSystem,
 	PolkadotXcm, RequiredStakeForStakeAndSlash, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
 	WeightToFee, XcmpQueue, SygmaBridge, CheckingAccount, Assets, Balance, XcmAssetId,
-	NativeLocation, UsdtAssetId, UsdtLocation, AssetId
+	NativeLocation, UsdcAssetId, UsdcLocation, AssetId
 };
 use cumulus_primitives_core::ParaId;
 use crate::{
@@ -50,9 +50,10 @@ use xcm_builder::{
 	WeightInfoBounds, WithComputedOrigin, WithUniqueTopic, FungiblesAdapter, NoChecking, FixedWeightBounds
 };
 use xcm_executor::{
-	traits::{ExportXcm, WithOriginFilter, MatchesFungibles, Error as ExecutionError},
+	traits::{ExportXcm, WithOriginFilter, MatchesFungible, MatchesFungibles, Error as ExecutionError},
 	XcmExecutor,
 };
+use sp_runtime::traits::CheckedConversion;
 use sygma_xcm_bridge::BridgeImpl;
 use sygma_traits::AssetTypeIdentifier;
 
@@ -103,7 +104,7 @@ pub type CurrencyTransactor = CurrencyAdapter<
 	// Use this currency:
 	Balances,
 	// Use this currency when it is a fungible asset matching the given location or name:
-	IsConcrete<RelayLocation>,
+	NativeAssetMatcher<NativeAssetTypeIdentifier<ParachainInfo>>,
 	// Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
 	LocationToAccountId,
 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
@@ -135,8 +136,8 @@ impl MatchesFungibles<AssetId, Balance> for SimpleForeignAssetConverter {
 	fn matches_fungibles(a: &MultiAsset) -> result::Result<(AssetId, Balance), ExecutionError> {
 		match (&a.fun, &a.id) {
 			(Fungible(ref amount), Concrete(ref id)) => {
-				if id == &UsdtLocation::get() {
-					Ok((UsdtAssetId::get(), *amount))
+				if id == &UsdcLocation::get() {
+					Ok((UsdcAssetId::get(), *amount))
 				} else {
 					Err(ExecutionError::AssetNotHandled)
 				}
@@ -422,6 +423,18 @@ impl sygma_bridge_forwarder::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type SygmaBridge = SygmaBridge;
 	type XCMBridge = BridgeImpl<Runtime>;
+}
+
+pub struct NativeAssetMatcher<C>(PhantomData<C>);
+impl<C: AssetTypeIdentifier, B: TryFrom<u128>> MatchesFungible<B> for NativeAssetMatcher<C> {
+	fn matches_fungible(a: &MultiAsset) -> Option<B> {
+		match (&a.id, &a.fun) {
+			(Concrete(_), Fungible(ref amount)) if C::is_native_asset(a) => {
+				CheckedConversion::checked_from(*amount)
+			}
+			_ => None,
+		}
+	}
 }
 
 /// NativeAssetTypeIdentifier impl AssetTypeIdentifier for XCMAssetTransactor

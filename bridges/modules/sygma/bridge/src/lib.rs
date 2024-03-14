@@ -199,6 +199,8 @@ pub mod pallet {
 		InsufficientBalance,
 		/// Asset transactor execution failed
 		TransactFailed,
+		TransactFailed2,
+		TransactFailed3,
 		/// The withdrawn amount can not cover the fee payment
 		FeeTooExpensive,
 		/// MPC address not set
@@ -477,7 +479,7 @@ pub mod pallet {
 				// Put empty message hash here because we are not sending XCM message
 				&XcmContext::with_message_id([0; 32]),
 			)
-			.map_err(|_| Error::<T>::TransactFailed)?;
+			.map_err(|_| Error::<T>::TransactFailed2)?;
 
 			let bridge_amount = amount - fee;
 
@@ -493,7 +495,7 @@ pub mod pallet {
 					// Put empty message hash here because we are not sending XCM message
 					&XcmContext::with_message_id([0; 32]),
 				)
-				.map_err(|_| Error::<T>::TransactFailed)?;
+				.map_err(|_| Error::<T>::TransactFailed3)?;
 			}
 
 			// Bump deposit nonce

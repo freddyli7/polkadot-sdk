@@ -653,26 +653,26 @@ parameter_types! {
     pub NativeLocation: MultiLocation = MultiLocation::here();
     pub NativeSygmaResourceId: [u8; 32] = hex_literal::hex!("0000000000000000000000000000000000000000000000000000000000000001");
 
-	// UsdtLocation is the representation of the USDT asset location in substrate
-	// USDT is a foreign asset, and in our local testing env, it's being registered on Parachain 2004 with the following location
-	pub UsdtLocation: MultiLocation = MultiLocation::new(
+	// UsdcLocation is the representation of the USDC asset location in substrate
+	// USDC is a foreign asset, and in our local testing env, it's being registered on Parachain 2004 with the following location
+	pub UsdcLocation: MultiLocation = MultiLocation::new(
 		1,
 		X3(
 			Parachain(2005),
 			slice_to_generalkey(b"sygma"),
-			slice_to_generalkey(b"usdt"),
+			slice_to_generalkey(b"usdc"),
 		),
 	);
-	// UsdtAssetId is the substrate assetID of USDT
-	pub UsdtAssetId: AssetId = 2000;
-	// UsdtResourceId is the resourceID that mapping with the foreign asset USDT
-	pub UsdtResourceId: ResourceId = hex_literal::hex!("0000000000000000000000000000000000000000000000000000000000000300");
+	// UsdcAssetId is the substrate assetID of USDC
+	pub UsdcAssetId: AssetId = 2000;
+	// UsdcResourceId is the resourceID that mapping with the foreign asset USDC
+	pub UsdcResourceId: ResourceId = hex_literal::hex!("0000000000000000000000000000000000000000000000000000000000000300");
 }
 
 fn bridge_accounts_generator() -> BTreeMap<XcmAssetId, AccountId32> {
 	let mut account_map: BTreeMap<XcmAssetId, AccountId32> = BTreeMap::new();
 	account_map.insert(NativeLocation::get().into(), BridgeAccountNative::get());
-	account_map.insert(UsdtLocation::get().into(), BridgeAccountOtherToken::get());
+	account_map.insert(UsdcLocation::get().into(), BridgeAccountOtherToken::get());
 	account_map
 }
 
@@ -695,8 +695,8 @@ parameter_types! {
 
 	pub const SygmaBridgePalletId: PalletId = PalletId(*b"sygma/01");
 
-	// SygmaBridgeAdminAccountKey Address: 44bdQyeqk5oJzxbZH9xMcovmj3oAxqzSjKujaVhHaZxZuTBH
-    pub SygmaBridgeAdminAccountKey: [u8; 32] = hex_literal::hex!("b00e3e4afb5a9c54036ec6c1775881031fb26b72427a10724c4d8b91099ee889");
+	// SygmaBridgeAdminAccountKey Address: 5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY (Alice)
+    pub SygmaBridgeAdminAccountKey: [u8; 32] = hex_literal::hex!("d43593c715fdd31c61141abd04a99fd6822c8558854ccde39a5684e7a56da27d");
     pub SygmaBridgeAdminAccount: AccountId = SygmaBridgeAdminAccountKey::get().into();
 
 	// SygmaBridgeFeeAccount is a substrate account and currently used for substrate -> EVM bridging fee collection
@@ -721,9 +721,9 @@ parameter_types! {
 	pub CheckingAccount: AccountId32 = AccountId32::new([102u8; 32]);
 
 	// ResourcePairs is where all supported assets and their associated resourceID are binding
-	pub ResourcePairs: Vec<(XcmAssetId, ResourceId)> = vec![(NativeLocation::get().into(), NativeSygmaResourceId::get()), (UsdtLocation::get().into(), UsdtResourceId::get())];
+	pub ResourcePairs: Vec<(XcmAssetId, ResourceId)> = vec![(NativeLocation::get().into(), NativeSygmaResourceId::get()), (UsdcLocation::get().into(), UsdcResourceId::get())];
 
-	pub AssetDecimalPairs: Vec<(XcmAssetId, u8)> = vec![(NativeLocation::get().into(), 12u8), (UsdtLocation::get().into(), 12u8)];
+	pub AssetDecimalPairs: Vec<(XcmAssetId, u8)> = vec![(NativeLocation::get().into(), 12u8), (UsdcLocation::get().into(), 12u8)];
 }
 
 pub struct ReserveChecker;
@@ -761,12 +761,12 @@ impl ConcrateSygmaAsset {
 						// relative to current chain.
 						Some(MultiLocation::new(0, X1(slice_to_generalkey(b"sygma"))))
 					} else {
-						// Other parachain assets should be treat as reserve asset when transfered
+						// Other parachain assets should be treated as reserve asset when transferred
 						// to outside EVM chains
 						Some(MultiLocation::here())
 					}
 				},
-				// Parent assets should be treat as reserve asset when transfered to outside EVM
+				// Parent assets should be treated as reserve asset when transferred to outside EVM
 				// chains
 				(1, _) => Some(MultiLocation::here()),
 				// Children parachain
@@ -785,18 +785,25 @@ impl ExtractDestinationData for DestinationDataParser {
 		match (dest.parents, &dest.interior) {
 			(
 				0,
-				Junctions::X2(
-					GeneralKey { length: recipient_len, data: recipient },
-					GeneralKey { length: _domain_len, data: dest_domain_id },
+				Junctions::X3(
+					GeneralKey {
+						length: path_len,
+						data: sygma_path,
+					},
+					GeneralIndex(dest_domain_id),
+					GeneralKey {
+						length: recipient_len,
+						data: recipient,
+					},
 				),
 			) => {
-				let d = u8::default();
-				let domain_id = dest_domain_id.as_slice().first().unwrap_or(&d);
-				if *domain_id == d {
-					return None;
+				if &sygma_path[..*path_len as usize] == &[0x73, 0x79, 0x67, 0x6d, 0x61] {
+					return TryInto::<DomainID>::try_into(*dest_domain_id).ok().map(
+						|domain_id| (recipient[..*recipient_len as usize].to_vec(), domain_id),
+					);
 				}
-				Some((recipient[..*recipient_len as usize].to_vec(), *domain_id))
-			},
+				None
+			}
 			_ => None,
 		}
 	}
