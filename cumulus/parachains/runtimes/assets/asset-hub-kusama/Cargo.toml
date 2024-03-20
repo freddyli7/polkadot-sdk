@@ -33,7 +33,8 @@ pallet-nfts-runtime-api = { path = "../../../../../substrate/frame/nfts/runtime-
 pallet-proxy = { path = "../../../../../substrate/frame/proxy", default-features = false}
 pallet-session = { path = "../../../../../substrate/frame/session", default-features = false}
 pallet-state-trie-migration = { path = "../../../../../substrate/frame/state-trie-migration", default-features = false, optional = true }
-pallet-timestamp = { path = "../../../../../substrate/frame/timestamp", default-features = false}
+pallet-timestamp = { path = "../../../../../substrate/frame/timestamp", default-features = false }
+pallet-sudo = { path = "../../../../../substrate/frame/sudo", default-features = false }
 pallet-transaction-payment = { path = "../../../../../substrate/frame/transaction-payment", default-features = false}
 pallet-transaction-payment-rpc-runtime-api = { path = "../../../../../substrate/frame/transaction-payment/rpc/runtime-api", default-features = false}
 pallet-uniques = { path = "../../../../../substrate/frame/uniques", default-features = false}
@@ -151,6 +152,7 @@ try-runtime = [
 	"pallet-session/try-runtime",
 	"pallet-state-trie-migration/try-runtime",
 	"pallet-timestamp/try-runtime",
+	"pallet-sudo/try-runtime",
 	"pallet-transaction-payment/try-runtime",
 	"pallet-uniques/try-runtime",
 	"pallet-utility/try-runtime",
@@ -194,6 +196,7 @@ std = [
 	"pallet-session/std",
 	"pallet-state-trie-migration/std",
 	"pallet-timestamp/std",
+	"pallet-sudo/std",
 	"pallet-transaction-payment-rpc-runtime-api/std",
 	"pallet-transaction-payment/std",
 	"pallet-uniques/std",

@@ -915,6 +915,12 @@ impl sygma_bridge::Config for Runtime {
 	type WeightInfo = sygma_bridge::weights::SygmaWeightInfo<Runtime>;
 }
 
+impl pallet_sudo::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime
@@ -964,6 +970,8 @@ construct_runtime!(
 		BridgeRococoMessages: pallet_bridge_messages::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>} = 45,
 
 		BridgeRelayers: pallet_bridge_relayers::{Pallet, Call, Storage, Event<T>} = 47,
+
+		Sudo: pallet_sudo = 66,
 
 		// sygma
         SygmaAccessSegregator: sygma_access_segregator::{Pallet, Call, Storage, Event<T>} = 90,
