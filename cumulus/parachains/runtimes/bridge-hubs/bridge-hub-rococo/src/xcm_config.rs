@@ -22,7 +22,7 @@ use super::{
 	BridgeGrandpaWococoInstance, DeliveryRewardInBalance, ParachainInfo, ParachainSystem,
 	PolkadotXcm, RequiredStakeForStakeAndSlash, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
 	WeightToFee, XcmpQueue, SygmaBridge, CheckingAccount, Assets, Balance, XcmAssetId,
-	NativeLocation, UsdcAssetId, UsdcLocation, AssetId
+	NativeLocation, UsdcAssetId, UsdcLocation, AssetId, SygmaBridgeForwarder
 };
 use cumulus_primitives_core::ParaId;
 use crate::{
@@ -31,12 +31,12 @@ use crate::{
 };
 use frame_support::{
 	match_types, parameter_types,
-	traits::{ConstU32, Contains, Everything, Nothing},
+	traits::{ConstU32, Contains, Everything, Nothing, ContainsPair},
 };
 use sp_runtime::AccountId32;
 use frame_system::EnsureRoot;
 use pallet_xcm::XcmPassthrough;
-use parachains_common::{impls::ToStakingPot, xcm_config::ConcreteNativeAssetFrom};
+use parachains_common::{impls::{ToStakingPot, NonZeroIssuance}, xcm_config::ConcreteNativeAssetFrom};
 use polkadot_parachain_primitives::primitives::Sibling;
 use sp_core::Get;
 use xcm::latest::prelude::*;
@@ -46,8 +46,8 @@ use xcm_builder::{
 	CurrencyAdapter, DenyReserveTransferToRelayChain, DenyThenTry, EnsureXcmOrigin, IsConcrete,
 	ParentAsSuperuser, ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative,
 	SiblingParachainConvertsVia, SignedAccountId32AsNative, SignedToAccountId32,
-	SovereignSignedViaLocation, TakeWeightCredit, TrailingSetTopicAsId, UsingComponents,
-	WeightInfoBounds, WithComputedOrigin, WithUniqueTopic, FungiblesAdapter, NoChecking, FixedWeightBounds
+	SovereignSignedViaLocation, TakeWeightCredit, TrailingSetTopicAsId, UsingComponents, LocalMint,
+	WeightInfoBounds, WithComputedOrigin, WithUniqueTopic, FungiblesAdapter, NoChecking, FixedWeightBounds, NativeAsset
 };
 use xcm_executor::{
 	traits::{ExportXcm, WithOriginFilter, MatchesFungible, MatchesFungibles, Error as ExecutionError},
@@ -56,6 +56,7 @@ use xcm_executor::{
 use sp_runtime::traits::CheckedConversion;
 use sygma_xcm_bridge::BridgeImpl;
 use sygma_traits::AssetTypeIdentifier;
+use sygma_bridge_forwarder::xcm_asset_transactor::XCMAssetTransactor;
 
 parameter_types! {
 	pub const RelayLocation: MultiLocation = MultiLocation::parent();
@@ -123,8 +124,8 @@ pub type FungiblesTransactor = FungiblesAdapter<
 	LocationToAccountId,
 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
 	AccountId32,
-	// Disable teleport.
-	NoChecking,
+	// enable teleport.
+	LocalMint<NonZeroIssuance<AccountId, Assets>>,
 	// The account to use for tracking teleports.
 	CheckingAccount,
 >;
@@ -134,11 +135,14 @@ pub type FungiblesTransactor = FungiblesAdapter<
 pub struct SimpleForeignAssetConverter(PhantomData<()>);
 impl MatchesFungibles<AssetId, Balance> for SimpleForeignAssetConverter {
 	fn matches_fungibles(a: &MultiAsset) -> result::Result<(AssetId, Balance), ExecutionError> {
+		log::trace!(target: "bridge_hub::xcm_config", "FungiblesTransactor SimpleForeignAssetConverter");
 		match (&a.fun, &a.id) {
 			(Fungible(ref amount), Concrete(ref id)) => {
 				if id == &UsdcLocation::get() {
+					log::trace!(target: "bridge_hub::xcm_config", "FungiblesTransactor SimpleForeignAssetConverter, USDC matched");
 					Ok((UsdcAssetId::get(), *amount))
 				} else {
+					log::trace!(target: "bridge_hub::xcm_config", "FungiblesTransactor SimpleForeignAssetConverter, nothing matched");
 					Err(ExecutionError::AssetNotHandled)
 				}
 			},
@@ -276,13 +280,21 @@ pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
 	type RuntimeCall = RuntimeCall;
 	type XcmSender = XcmRouter;
-	type AssetTransactor = CurrencyTransactor;
+	type AssetTransactor = XCMAssetTransactor<
+		CurrencyTransactor,
+		FungiblesTransactor,
+		NativeAssetTypeIdentifier<ParachainInfo>,
+		SygmaBridgeForwarder,
+	>;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
 	// BridgeHub does not recognize a reserve location for any asset. Users must teleport Native
 	// token where allowed (e.g. with the Relay Chain).
 	type IsReserve = ();
 	/// Only allow teleportation of NativeToken of relay chain.
-	type IsTeleporter = ConcreteNativeAssetFrom<RelayLocation>;
+	type IsTeleporter = (
+		NativeAsset,
+		IsForeignConcreteAsset<FromSiblingParachain<parachain_info::Pallet<Runtime>>>,
+	);
 	type UniversalLocation = UniversalLocation;
 	type Barrier = Barrier;
 	type Weigher = WeightInfoBounds<
@@ -333,10 +345,10 @@ impl pallet_xcm::Config for Runtime {
 	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
 	// We support local origins dispatching XCM executions in principle...
 	type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
-	type XcmExecuteFilter = Nothing;
+	type XcmExecuteFilter = Everything;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
 	type XcmTeleportFilter = Everything;
-	type XcmReserveTransferFilter = Nothing; // This parachain is not meant as a reserve location.
+	type XcmReserveTransferFilter = Everything; // This parachain is not meant as a reserve location.
 	type Weigher = WeightInfoBounds<
 		crate::weights::xcm::BridgeHubRococoXcmWeight<RuntimeCall>,
 		RuntimeCall,
@@ -451,6 +463,39 @@ impl<T: Get<ParaId>> AssetTypeIdentifier for NativeAssetTypeIdentifier<T> {
 
 		match (&asset.id, &asset.fun) {
 			(Concrete(ref id), Fungible(_)) => native_locations.contains(id),
+			_ => false,
+		}
+	}
+}
+
+/// Accepts an asset if it is from the origin.
+pub struct IsForeignConcreteAsset<IsForeign>(sp_std::marker::PhantomData<IsForeign>);
+impl<IsForeign: ContainsPair<MultiLocation, MultiLocation>> ContainsPair<MultiAsset, MultiLocation>
+for IsForeignConcreteAsset<IsForeign>
+{
+	fn contains(asset: &MultiAsset, origin: &MultiLocation) -> bool {
+		log::trace!(target: "xcm::contains", "IsForeignConcreteAsset asset: {:?}, origin: {:?}", asset, origin);
+		log::trace!(target: "xcm::contains", "IsForeignConcreteAsset asset: {:?}, origin: {:?} match: {:?}", asset, origin, matches!(asset.id, Concrete(ref id) if IsForeign::contains(id, origin)));
+		matches!(asset.id, Concrete(ref id) if IsForeign::contains(id, origin))
+	}
+}
+
+/// Checks if `a` is from sibling location `b`. Checks that `MultiLocation-a` starts with
+/// `MultiLocation-b`, and that the `ParaId` of `b` is not equal to `a`.
+pub struct FromSiblingParachain<SelfParaId>(sp_std::marker::PhantomData<SelfParaId>);
+impl<SelfParaId: Get<ParaId>> ContainsPair<MultiLocation, MultiLocation>
+for FromSiblingParachain<SelfParaId>
+{
+	fn contains(&a: &MultiLocation, b: &MultiLocation) -> bool {
+		// `a` needs to be from `b` at least
+		if !a.starts_with(b) {
+			return false
+		}
+
+		// here we check if sibling
+		match a {
+			MultiLocation { parents: 1, interior } =>
+				matches!(interior.first(), Some(Parachain(sibling_para_id)) if sibling_para_id.ne(&u32::from(SelfParaId::get()))),
 			_ => false,
 		}
 	}

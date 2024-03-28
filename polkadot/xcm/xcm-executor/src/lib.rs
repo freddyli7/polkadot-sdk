@@ -527,6 +527,7 @@ impl<Config: config::Config> XcmExecutor<Config> {
 			ReceiveTeleportedAsset(assets) => {
 				let origin = *self.origin_ref().ok_or(XcmError::BadOrigin)?;
 				// check whether we trust origin to teleport this asset to us via config trait.
+				log::trace!(target: "xcm::execute_xcm_in_credit","ReceiveTeleportedAsset=========");
 				for asset in assets.inner() {
 					// We only trust the origin to send us assets that they identify as their
 					// sovereign assets.
@@ -538,12 +539,16 @@ impl<Config: config::Config> XcmExecutor<Config> {
 					// in error, there would need to be an accounting violation by one of the
 					// trusted chains, so it's unlikely, but we don't want to punish a possibly
 					// innocent chain/user).
+					log::trace!(target: "xcm::execute_xcm_in_credit","ReceiveTeleportedAsset can_check_in starts=========");
 					Config::AssetTransactor::can_check_in(&origin, asset, &self.context)?;
+					log::trace!(target: "xcm::execute_xcm_in_credit","can_check_in finished all good =========");
 				}
+				log::trace!(target: "xcm::execute_xcm_in_credit","check_in starts =========");
 				for asset in assets.into_inner().into_iter() {
 					Config::AssetTransactor::check_in(&origin, &asset, &self.context);
 					self.subsume_asset(asset)?;
 				}
+				log::trace!(target: "xcm::execute_xcm_in_credit","check_in finished all good =========");
 				Ok(())
 			},
 			Transact { origin_kind, require_weight_at_most, mut call } => {
@@ -688,9 +693,15 @@ impl<Config: config::Config> XcmExecutor<Config> {
 				// and thus there is some other reason why it has been determined that this XCM
 				// should be executed.
 				if let Some(weight) = Option::<Weight>::from(weight_limit) {
+					log::trace!(target: "xcm::execute_xcm_in_credit","BuyExecution=========  fees: {:?}", fees);
 					// pay for `weight` using up to `fees` of the holding register.
 					let max_fee =
 						self.holding.try_take(fees.into()).map_err(|_| XcmError::NotHoldingFees)?;
+
+					for (k, v) in &max_fee.fungible {
+						log::trace!(target: "xcm::execute_xcm_in_credit","BuyExecution=========  max_fee_assetID: {:?}, max_fee_amount: {:?}", k, v);
+					}
+
 					let unspent = self.trader.buy_weight(weight, max_fee, &self.context)?;
 					self.subsume_assets(unspent)?;
 				}

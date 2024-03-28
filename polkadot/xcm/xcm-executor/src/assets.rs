@@ -415,15 +415,19 @@ impl Assets {
 		match asset.fun {
 			Fungible(amount) => {
 				let remove = if let Some(balance) = self.fungible.get_mut(&asset.id) {
+					log::trace!(target: "xcm::assets","checked_sub========= payment's balance: {:?}, amount: {:?}", balance, amount);
 					if *balance >= amount {
 						*balance -= amount;
 						*balance == 0
 					} else {
+						log::trace!(target: "xcm::assets","checked_sub========= err 1");
 						return Err(self)
 					}
 				} else {
+					log::trace!(target: "xcm::assets","checked_sub========= err 2");
 					return Err(self)
 				};
+				log::trace!(target: "xcm::assets","checked_sub========= remove: {:?}", remove); // false
 				if remove {
 					self.fungible.remove(&asset.id);
 				}

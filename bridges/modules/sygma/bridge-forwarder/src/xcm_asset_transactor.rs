@@ -90,4 +90,9 @@ impl<
 
 		Ok(assets)
 	}
+
+	// TODO: need to impl this method in order to pass the can_check_in for token teleport
+	fn can_check_in(origin: &MultiLocation, what: &MultiAsset, context: &XcmContext) -> XcmResult {
+		Ok(())
+	}
 }

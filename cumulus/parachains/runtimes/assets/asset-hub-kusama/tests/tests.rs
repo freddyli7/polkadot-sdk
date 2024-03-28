@@ -334,6 +334,14 @@ fn test_that_buying_ed_refund_does_not_refund() {
 		});
 }
 
+/// this is for printting out the XCM CheckingAccount in FungiblesTransactor
+/// This account needs to be existing after chain launching
+/// This account is the token reserve account for teleporting
+#[test]
+fn asset_hub_print_checking_account_of_FungiblesTransactor() {
+	println!("asset hub FungiblesTransactor CheckingAccount: {:?}", CheckingAccount::get());
+}
+
 #[test]
 fn test_asset_xcm_trader_not_possible_for_non_sufficient_assets() {
 	ExtBuilder::<Runtime>::default()

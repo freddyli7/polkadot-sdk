@@ -1,0 +1,96 @@
+[settings]
+node_spawn_timeout = 240
+
+[relaychain]
+default_command = "../target/release/polkadot"
+default_args = [ "-lparachain=debug,xcm=trace" ]
+chain = "rococo-local"
+
+	[[relaychain.nodes]]
+	name = "alice-validator"
+	validator = true
+	rpc_port = 9932
+	ws_port = 9942
+	extra_args = ["--no-mdns --bootnodes {{'bob-validator'|zombie('multiAddress')}}"]
+
+	[[relaychain.nodes]]
+	name = "bob-validator"
+	validator = true
+	rpc_port = 9933
+	ws_port = 9943
+	extra_args = ["--no-mdns --bootnodes {{'alice-validator'|zombie('multiAddress')}}"]
+
+[[parachains]]
+id = 1013
+chain = "bridge-hub-rococo-local"
+cumulus_based = true
+
+	# run alice as parachain collator
+	[[parachains.collators]]
+	name = "bridge-hub-alice-collator"
+	validator = true
+	command = "../target/release/polkadot-parachain"
+	rpc_port = 8933
+	ws_port = 8943
+	args = [
+		"-lparachain=warn,runtime::bridge-hub=debug,runtime::bridge=trace,runtime::bridge-dispatch=debug,bridge=trace,runtime::bridge-messages=debug,xcm=trace",
+	]
+	extra_args = [
+		"--force-authoring", "--no-mdns", "--bootnodes {{'bridge-hub-bob-collator'|zombie('multiAddress')}}", "--bootnodes {{'alice-validator'|zombie('multiAddress')}}"
+	]
+
+	# run bob as parachain collator
+	[[parachains.collators]]
+	name = "bridge-hub-bob-collator"
+	validator = true
+	command = "../target/release/polkadot-parachain"
+	rpc_port = 8934
+	ws_port = 8944
+	args = [
+		"-lparachain=warn,runtime::bridge-hub=debug,runtime::bridge=trace,runtime::bridge-dispatch=debug,bridge=trace,runtime::bridge-messages=debug,xcm=trace",
+	]
+	extra_args = [
+		"--force-authoring", "--no-mdns", "--bootnodes {{'bridge-hub-alice-collator'|zombie('multiAddress')}}", "--bootnodes {{'bob-validator'|zombie('multiAddress')}}"
+	]
+
+[[parachains]]
+id = 1000
+chain = "asset-hub-kusama-local"
+cumulus_based = true
+
+	[[parachains.collators]]
+	name = "asset-hub-alice-collator"
+	rpc_port = 9911
+	ws_port = 9910
+	command = "../target/release/polkadot-parachain"
+	args = [
+		"-lparachain=debug,xcm=trace,runtime::bridge-transfer=trace",
+	]
+	extra_args = [
+		"--no-mdns", "--bootnodes {{'asset-hub-bob-collator'|zombie('multiAddress')}}", "--bootnodes {{'alice-validator'|zombie('multiAddress')}}"
+	]
+
+	[[parachains.collators]]
+	name = "asset-hub-bob-collator"
+	rpc_port = 9811
+	ws_port = 9810
+	command = "../target/release/polkadot-parachain"
+	args = [
+		"-lparachain=debug,xcm=trace,runtime::bridge-transfer=trace",
+	]
+	extra_args = [
+		"--no-mdns", "--bootnodes {{'asset-hub-alice-collator'|zombie('multiAddress')}}", "--bootnodes {{'alice-validator'|zombie('multiAddress')}}"
+	]
+
+# TODO: open an issue on zombienet repo
+#[[hrmp_channels]]
+#sender = 1000
+#recipient = 1013
+#max_capacity = 8
+#max_message_size = 1048576
+#
+#[[hrmp_channels]]
+#sender = 1013
+#recipient = 1000
+#max_capacity = 8
+#max_message_size = 1048576

@@ -653,14 +653,14 @@ parameter_types! {
     pub NativeLocation: MultiLocation = MultiLocation::here();
     pub NativeSygmaResourceId: [u8; 32] = hex_literal::hex!("0000000000000000000000000000000000000000000000000000000000000001");
 
-	// UsdcLocation is the representation of the USDC asset location in substrate
-	// USDC is a foreign asset, and in our local testing env, it's being registered on Parachain 2004 with the following location
+	// TODO: USDC multilocation must match with its location on the source chain
+ 	// on the source chain(asset hub in our case), assetID(u32) is linking with the token multilocation
 	pub UsdcLocation: MultiLocation = MultiLocation::new(
 		1,
 		X3(
-			Parachain(2005),
-			slice_to_generalkey(b"sygma"),
-			slice_to_generalkey(b"usdc"),
+			Parachain(1000),
+			PalletInstance(50),
+			GeneralIndex(2000),
 		),
 	);
 	// UsdcAssetId is the substrate assetID of USDC

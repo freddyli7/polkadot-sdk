@@ -334,6 +334,11 @@ mod bridge_hub_wococo_tests {
 	}
 
 	#[test]
+	fn bridge_hub_print_checking_account_of_FungiblesTransactor() {
+		println!("bridge hub FungiblesTransactor CheckingAccount: {:?}", CheckingAccount::get());
+	}
+
+	#[test]
 	fn change_required_stake_by_governance_works() {
 		bridge_hub_test_utils::test_cases::change_storage_constant_by_governance_works::<
 			Runtime,
