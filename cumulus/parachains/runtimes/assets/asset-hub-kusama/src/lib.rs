@@ -1377,24 +1377,6 @@ parameter_types! {
 	pub const MigrationMaxKeyLen: u32 = 512;
 }
 
-// // TODO: USDC multilocation must match with its location on the source chain
-// // on the source chain(asset hub in our case), assetID(u32) is linking with the token multilocation
-// parameter_types! {
-// 	// UsdcLocation is the representation of the USDC asset location in substrate
-// 	// USDC is a foreign asset, and in our local testing env, it's being registered on Parachain 2004 with the following location
-// 	pub UsdcLocation: MultiLocation = MultiLocation::new(
-// 		1,
-// 		X3(
-// 			Parachain(1000),
-// 			PalletInstance(50),
-// 			GeneralIndex(2000),
-// 		),
-// 	);
-//
-// 	// UsdcAssetId is the substrate assetID of USDC
-// 	pub UsdcAssetId: AssetId = 2000;
-// }
-
 #[cfg(feature = "state-trie-version-1")]
 impl pallet_state_trie_migration::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;

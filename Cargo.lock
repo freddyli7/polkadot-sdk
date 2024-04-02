@@ -755,6 +755,7 @@ dependencies = [
  "staging-xcm-builder",
  "staging-xcm-executor",
  "substrate-wasm-builder",
+ "sygma-traits",
 ]
 
 [[package]]
@@ -18253,6 +18254,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "hex-literal 0.3.4",
+ "log",
  "pallet-assets",
  "pallet-balances",
  "pallet-timestamp",

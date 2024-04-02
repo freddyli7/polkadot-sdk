@@ -30,6 +30,7 @@ impl<
 		match (who.parents, who.first_interior()) {
 			// 1. recipient is on the local parachain
 			(0, Some(AccountId32 { .. })) | (0, Some(AccountKey20 { .. })) => {
+				log::trace!(target: "bridge_hub::xcm_config", "sygma::xcm-asset-transactor, deposit_asset recipient is on the local parachain");
 				// check if the asset is native, and call the corresponding deposit_asset()
 				if AssetTypeChecker::is_native_asset(what) {
 					CurrencyTransactor::deposit_asset(what, who, context)?;
@@ -44,7 +45,10 @@ impl<
 					// sygma: 7379676d61000000000000000000000000000000000000000000000000000000
                     // sygma-bridge: 7379676d612d6272696467650000000000000000000000000000000000000000
 					// outer world multilocation pattern: { Parachain(X), GeneralKey { length: 5, data: b"sygma"},  GeneralKey { length: 12, data: b"sygma-bridge"}, GeneralIndex(domainID), GeneralKey { length: length_of_recipient_address, data: recipient_address} }
-                    X4(GeneralKey { length: 5, data: hex!["7379676d61000000000000000000000000000000000000000000000000000000"]},  GeneralKey { length: 12, data: hex!["7379676d612d6272696467650000000000000000000000000000000000000000"]}, GeneralIndex(..), GeneralKey { .. }) => {
+                    X4(GeneralKey { length: 5, data: hex!["7379676d61000000000000000000000000000000000000000000000000000000"] },  GeneralKey { length: 12, data: hex!["7379676d612d6272696467650000000000000000000000000000000000000000"]}, GeneralIndex(..), GeneralKey { .. }) => {
+
+						log::trace!(target: "bridge_hub::xcm_config", "sygma::xcm-asset-transactor deposit_asset recipient is on the sygma {:?}", who.interior);
+
 						// check if the asset is native or foreign, and deposit the asset to a tmp account first
                         let tmp_account = sp_io::hashing::blake2_256(&MultiLocation::new(0, X1(GeneralKey { length: 8, data: [1u8; 32] })).encode());
                         if AssetTypeChecker::is_native_asset(what) {
@@ -57,6 +61,8 @@ impl<
                     }
 					// 3. recipient is on remote parachain, will forward to xcm bridge pallet
                     _ => {
+						log::trace!(target: "sygma::xcm-asset-transactor", "sygma::xcm-asset-transactor deposit_asset recipient is on the remote parachain {:?}", who.interior);
+
 						// xcm message must have a sender(origin), so a tmp account derived from pallet would be necessary here
                         let tmp_account = sp_io::hashing::blake2_256(&MultiLocation::new(0, X1(GeneralKey { length: 8, data: [2u8; 32] })).encode());
 

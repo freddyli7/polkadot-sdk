@@ -444,6 +444,8 @@ pub mod pallet {
 
 			ensure!(!MpcAddr::<T>::get().is_clear(), Error::<T>::MissingMpcAddress);
 
+			log::trace!(target: "bridge_hub::xcm_config","sygma::bridge-pallet deposit asset: {:?}, dest: {:?}", asset, dest);
+
 			// Extract dest (MultiLocation) to get corresponding dest domainID and Ethereum
 			// recipient address
 			let (recipient, dest_domain_id) =

@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use sp_std::{marker::PhantomData};
 use super::{
 	AccountId, AllPalletsWithSystem, Assets, Authorship, Balance, Balances, ParachainInfo,
 	ParachainSystem, PolkadotXcm, PoolAssets, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
@@ -33,7 +34,7 @@ use frame_system::EnsureRoot;
 use pallet_xcm::XcmPassthrough;
 use parachains_common::{impls::ToStakingPot, xcm_config::AssetFeeAsExistentialDepositMultiplier};
 use polkadot_parachain_primitives::primitives::Sibling;
-use sp_runtime::traits::ConvertInto;
+use sp_runtime::traits::{CheckedConversion, ConvertInto};
 use xcm::latest::prelude::*;
 use xcm_builder::{
 	AccountId32Aliases, AllowExplicitUnpaidExecutionFrom, AllowKnownQueryResponses,
@@ -46,9 +47,10 @@ use xcm_builder::{
 	WeightInfoBounds, WithComputedOrigin, WithUniqueTopic,
 };
 use xcm_executor::{traits::WithOriginFilter, XcmExecutor};
-
-#[cfg(feature = "runtime-benchmarks")]
-use {cumulus_primitives_core::ParaId, sp_core::Get};
+use sygma_traits::AssetTypeIdentifier;
+use cumulus_primitives_core::ParaId;
+use sp_core::Get;
+use xcm_executor::traits::MatchesFungible;
 
 parameter_types! {
 	pub const KsmLocation: MultiLocation = MultiLocation::parent();
@@ -87,7 +89,8 @@ pub type CurrencyTransactor = CurrencyAdapter<
 	// Use this currency:
 	Balances,
 	// Use this currency when it is a fungible asset matching the given location or name:
-	IsConcrete<KsmLocation>,
+	// IsConcrete<KsmLocation>,
+	NativeAssetMatcher<NativeAssetTypeIdentifier<ParachainInfo>>,
 	// Convert an XCM MultiLocation into a local account id:
 	LocationToAccountId,
 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
@@ -95,6 +98,37 @@ pub type CurrencyTransactor = CurrencyAdapter<
 	// We don't track any teleports of `Balances`.
 	(),
 >;
+
+/// NativeAssetTypeIdentifier impl AssetTypeIdentifier for XCMAssetTransactor
+/// This impl is only for local mock purpose, the integrated parachain might have their own version
+pub struct NativeAssetTypeIdentifier<T>(PhantomData<T>);
+impl<T: Get<ParaId>> AssetTypeIdentifier for NativeAssetTypeIdentifier<T> {
+	/// check if the given MultiAsset is a native asset
+	fn is_native_asset(asset: &MultiAsset) -> bool {
+		// currently there are two multilocations are considered as native asset:
+		// 1. integrated parachain native asset(MultiLocation::here())
+		// 2. other parachain native asset(MultiLocation::new(1, X1(Parachain(T::get().into()))))
+		let native_locations =
+			[MultiLocation::here(), MultiLocation::new(1, X1(Parachain(T::get().into())))];
+
+		match (&asset.id, &asset.fun) {
+			(Concrete(ref id), Fungible(_)) => native_locations.contains(id),
+			_ => false,
+		}
+	}
+}
+
+pub struct NativeAssetMatcher<C>(PhantomData<C>);
+impl<C: AssetTypeIdentifier, B: TryFrom<u128>> MatchesFungible<B> for NativeAssetMatcher<C> {
+	fn matches_fungible(a: &MultiAsset) -> Option<B> {
+		match (&a.id, &a.fun) {
+			(Concrete(_), Fungible(ref amount)) if C::is_native_asset(a) => {
+				CheckedConversion::checked_from(*amount)
+			}
+			_ => None,
+		}
+	}
+}
 
 /// `AssetId`/`Balance` converter for `PoolAssets`.
 pub type TrustBackedAssetsConvertedConcreteId =

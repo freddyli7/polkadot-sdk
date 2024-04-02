@@ -38,6 +38,7 @@ use sp_runtime::{
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult,AccountId32
 };
+use hex_literal::hex;
 
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -653,7 +654,18 @@ parameter_types! {
     pub NativeLocation: MultiLocation = MultiLocation::here();
     pub NativeSygmaResourceId: [u8; 32] = hex_literal::hex!("0000000000000000000000000000000000000000000000000000000000000001");
 
-	// TODO: USDC multilocation must match with its location on the source chain
+	pub TttLocation: MultiLocation = MultiLocation::new(
+		1,
+		X3(
+			Parachain(1013),
+			slice_to_generalkey(b"sygma"),
+			slice_to_generalkey(b"TTT"),
+		),
+	);
+	pub TttAssetId: AssetId = 2002;
+	pub TttResourceId: ResourceId = hex_literal::hex!("0000000000000000000000000000000000000000000000000000000000000002");
+
+	// USDC multilocation must match with its location on the source chain
  	// on the source chain(asset hub in our case), assetID(u32) is linking with the token multilocation
 	pub UsdcLocation: MultiLocation = MultiLocation::new(
 		1,
@@ -667,12 +679,25 @@ parameter_types! {
 	pub UsdcAssetId: AssetId = 2000;
 	// UsdcResourceId is the resourceID that mapping with the foreign asset USDC
 	pub UsdcResourceId: ResourceId = hex_literal::hex!("0000000000000000000000000000000000000000000000000000000000000300");
+
+	// Asset hub parachain native token
+	// in this integration demo, we treat Native asset of other parachain as Asset, not Balance
+	pub AssetHubNativeAssetLocation: MultiLocation = MultiLocation::new(
+		1,
+		X1(
+			Parachain(1000),
+		),
+	);
+	pub AssetHubNativeAssetId: AssetId = 2001;
+	pub AssetHubNativeResourceId: ResourceId = hex_literal::hex!("0000000000000000000000000000000000000000000000000000000000000301");
 }
 
 fn bridge_accounts_generator() -> BTreeMap<XcmAssetId, AccountId32> {
 	let mut account_map: BTreeMap<XcmAssetId, AccountId32> = BTreeMap::new();
 	account_map.insert(NativeLocation::get().into(), BridgeAccountNative::get());
 	account_map.insert(UsdcLocation::get().into(), BridgeAccountOtherToken::get());
+	account_map.insert(AssetHubNativeAssetLocation::get().into(), BridgeAccountOtherToken::get());
+	account_map.insert(TttLocation::get().into(), BridgeAccountOtherToken::get());
 	account_map
 }
 
@@ -718,12 +743,20 @@ parameter_types! {
     // As long as the relayer and pallet configured with the same address, EIP712Domain should be recognized properly.
     pub DestVerifyingContractAddress: VerifyingContractAddress = primitive_types::H160::from_slice(hex::decode(DEST_VERIFYING_CONTRACT_ADDRESS).ok().unwrap().as_slice());
 
-	pub CheckingAccount: AccountId32 = AccountId32::new([102u8; 32]);
+	// PolkadotXcm::check_account() => 5EYCAe5ijiYgWYWi1fs8Xz1td1djEtJVVnNfzvDRP4VtLL7Y
+	pub CheckingAccount: AccountId = PolkadotXcm::check_account();
+	// AccountId32::new([102u8; 32]) => 5ENyAGMhJ8tDd69sQNhcDD5RCms4vmhUCUtZtP4y2rcUXtt2
+	// pub CheckingAccount: AccountId32 = AccountId32::new([102u8; 32]);
 
 	// ResourcePairs is where all supported assets and their associated resourceID are binding
-	pub ResourcePairs: Vec<(XcmAssetId, ResourceId)> = vec![(NativeLocation::get().into(), NativeSygmaResourceId::get()), (UsdcLocation::get().into(), UsdcResourceId::get())];
+	pub ResourcePairs: Vec<(XcmAssetId, ResourceId)> = vec![
+		(NativeLocation::get().into(), NativeSygmaResourceId::get()),
+		(UsdcLocation::get().into(), UsdcResourceId::get()),
+		(AssetHubNativeAssetLocation::get().into(), AssetHubNativeResourceId::get()),
+		(TttLocation::get().into(), TttResourceId::get())
+	];
 
-	pub AssetDecimalPairs: Vec<(XcmAssetId, u8)> = vec![(NativeLocation::get().into(), 12u8), (UsdcLocation::get().into(), 12u8)];
+	pub AssetDecimalPairs: Vec<(XcmAssetId, u8)> = vec![(NativeLocation::get().into(), 12u8), (UsdcLocation::get().into(), 12u8), (AssetHubNativeAssetLocation::get().into(), 12u8), (TttLocation::get().into(), 12u8)];
 }
 
 pub struct ReserveChecker;
@@ -753,9 +786,8 @@ impl ConcrateSygmaAsset {
 			match (id.parents, id.first_interior()) {
 				// Sibling parachain
 				(1, Some(Parachain(id))) => {
-					// Assume current parachain id is 2004, for production, you should always get
-					// your it from parachain info
-					if *id == 2004 {
+					// Assume current parachain id is 1013
+					if *id == 1013 {
 						// The registered foreign assets actually reserved on EVM chains, so when
 						// transfer back to EVM chains, they should be treated as non-reserve assets
 						// relative to current chain.
@@ -785,10 +817,14 @@ impl ExtractDestinationData for DestinationDataParser {
 		match (dest.parents, &dest.interior) {
 			(
 				0,
-				Junctions::X3(
+				Junctions::X4(
 					GeneralKey {
 						length: path_len,
 						data: sygma_path,
+					},
+					GeneralKey {
+						length: pallet_path_len,
+						data: sygma_pallet_path,
 					},
 					GeneralIndex(dest_domain_id),
 					GeneralKey {
@@ -797,7 +833,8 @@ impl ExtractDestinationData for DestinationDataParser {
 					},
 				),
 			) => {
-				if &sygma_path[..*path_len as usize] == &[0x73, 0x79, 0x67, 0x6d, 0x61] {
+				if &sygma_path[..*path_len as usize] == &[0x73, 0x79, 0x67, 0x6d, 0x61] &&
+					&sygma_pallet_path[.. *pallet_path_len as usize] == &[0x73, 0x79, 0x67, 0x6d, 0x61, 0x2d, 0x62, 0x72, 0x69, 0x64, 0x67, 0x65] {
 					return TryInto::<DomainID>::try_into(*dest_domain_id).ok().map(
 						|domain_id| (recipient[..*recipient_len as usize].to_vec(), domain_id),
 					);

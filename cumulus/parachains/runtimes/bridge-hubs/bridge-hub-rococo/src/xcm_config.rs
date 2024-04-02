@@ -22,7 +22,7 @@ use super::{
 	BridgeGrandpaWococoInstance, DeliveryRewardInBalance, ParachainInfo, ParachainSystem,
 	PolkadotXcm, RequiredStakeForStakeAndSlash, Runtime, RuntimeCall, RuntimeEvent, RuntimeOrigin,
 	WeightToFee, XcmpQueue, SygmaBridge, CheckingAccount, Assets, Balance, XcmAssetId,
-	NativeLocation, UsdcAssetId, UsdcLocation, AssetId, SygmaBridgeForwarder
+	NativeLocation, UsdcAssetId, UsdcLocation, AssetHubNativeAssetLocation, AssetHubNativeAssetId, AssetId, SygmaBridgeForwarder, TttLocation, TttAssetId,
 };
 use cumulus_primitives_core::ParaId;
 use crate::{
@@ -141,6 +141,12 @@ impl MatchesFungibles<AssetId, Balance> for SimpleForeignAssetConverter {
 				if id == &UsdcLocation::get() {
 					log::trace!(target: "bridge_hub::xcm_config", "FungiblesTransactor SimpleForeignAssetConverter, USDC matched");
 					Ok((UsdcAssetId::get(), *amount))
+				} else if id == &AssetHubNativeAssetLocation::get() {
+					log::trace!(target: "bridge_hub::xcm_config", "FungiblesTransactor SimpleForeignAssetConverter, AssetHubNativeAsset matched");
+					Ok((AssetHubNativeAssetId::get(), *amount))
+				} else if id == &TttLocation::get() {
+					log::trace!(target: "bridge_hub::xcm_config", "FungiblesTransactor SimpleForeignAssetConverter, TTT matched");
+					Ok((TttAssetId::get(), *amount))
 				} else {
 					log::trace!(target: "bridge_hub::xcm_config", "FungiblesTransactor SimpleForeignAssetConverter, nothing matched");
 					Err(ExecutionError::AssetNotHandled)
@@ -457,7 +463,7 @@ impl<T: Get<ParaId>> AssetTypeIdentifier for NativeAssetTypeIdentifier<T> {
 	fn is_native_asset(asset: &MultiAsset) -> bool {
 		// currently there are two multilocations are considered as native asset:
 		// 1. integrated parachain native asset(MultiLocation::here())
-		// 2. other parachain native asset(MultiLocation::new(1, X1(Parachain(T::get().into()))))
+		// 2. other parachain native asset(MultiLocation::new(1, X1(Parachain(1013)))), 1013 is the bridge hub parachainID in this case
 		let native_locations =
 			[MultiLocation::here(), MultiLocation::new(1, X1(Parachain(T::get().into())))];
 

@@ -81,6 +81,9 @@ parachain-info = { path = "../../../pallets/parachain-info", default-features = 
 parachains-common = { path = "../../../common", default-features = false }
 assets-common = { path = "../common", default-features = false }
 
+# sygma
+sygma-traits = { path = "../../../../../bridges/modules/sygma/traits", default-features = false }
+
 [dev-dependencies]
 asset-test-utils = { path = "../test-utils" }
 
@@ -224,6 +227,7 @@ std = [
 	"sp-version/std",
 	"sp-weights/std",
 	"substrate-wasm-builder",
+	"sygma-traits/std",
 	"xcm-builder/std",
 	"xcm-executor/std",
 	"xcm/std",

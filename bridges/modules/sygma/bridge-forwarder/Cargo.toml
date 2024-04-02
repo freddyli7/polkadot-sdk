@@ -29,6 +29,7 @@ cumulus-primitives-utility = { path = "../../../../cumulus/primitives/utility", 
 
 # Local
 sygma-traits = { path = "../traits", default-features = false }
+log = { version = "0.4.20", default-features = false }
 
 [dev-dependencies]
 # Substrate
