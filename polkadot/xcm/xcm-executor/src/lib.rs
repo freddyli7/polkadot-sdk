@@ -488,7 +488,13 @@ impl<Config: config::Config> XcmExecutor<Config> {
 			ReserveAssetDeposited(assets) => {
 				// check whether we trust origin to be our reserve location for this asset.
 				let origin = *self.origin_ref().ok_or(XcmError::BadOrigin)?;
+
+				log::trace!(target: "xcm::execute_xcm_in_credit", "ReserveAssetDeposited origin {:?}", origin);
+
 				for asset in assets.into_inner().into_iter() {
+
+					log::trace!(target: "xcm::execute_xcm_in_credit", "ReserveAssetDeposited asset {:?}", asset);
+
 					// Must ensure that we recognise the asset as being managed by the origin.
 					ensure!(
 						Config::IsReserve::contains(&asset, &origin),
@@ -643,11 +649,17 @@ impl<Config: config::Config> XcmExecutor<Config> {
 			InitiateReserveWithdraw { assets, reserve, xcm } => {
 				// Note that here we are able to place any assets which could not be reanchored
 				// back into Holding.
+
+				log::trace!(target: "xcm::execute_xcm_in_credit", "InitiateReserveWithdraw assets {:?}, reserve: {:?}", assets, reserve);
+
 				let assets = Self::reanchored(
 					self.holding.saturating_take(assets),
 					&reserve,
 					Some(&mut self.holding),
 				);
+
+				log::trace!(target: "xcm::execute_xcm_in_credit", "InitiateReserveWithdraw::reanchored assets {:?}", assets);
+
 				let mut message = vec![WithdrawAsset(assets), ClearOrigin];
 				message.extend(xcm.0.into_iter());
 				self.send(reserve, Xcm(message), FeeReason::InitiateReserveWithdraw)?;

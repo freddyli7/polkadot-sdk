@@ -111,6 +111,8 @@ pub mod pallet {
 			let kind = Self::transfer_kind(self, asset_reserved_location)
 				.ok_or(Error::<T>::UnknownTransferType)?;
 
+			log::trace!(target: "bridge_hub::xcm_config", "sygma xcm-bridge pallet::create_instructions asset_reserved_location: {:?}, kind: {:?}", asset_reserved_location, kind);
+
 			let mut assets = MultiAssets::new();
 			assets.push(self.asset.clone());
 
@@ -139,6 +141,8 @@ pub mod pallet {
 				)?,
 			};
 
+			log::trace!(target: "bridge_hub::xcm_config", "sygma xcm-bridge pallet::all xcm_instructions: {:?}", xcm_instructions);
+
 			Ok(xcm_instructions)
 		}
 
@@ -151,11 +155,13 @@ pub mod pallet {
 
 			let hash = xcm_instructions.using_encoded(sp_io::hashing::blake2_256);
 
+			log::trace!(target: "bridge_hub::xcm_config", "sygma xcm-bridge pallet::execute_xcm_in_credit"); // executed to here
+
 			T::XcmExecutor::execute_xcm_in_credit(
 				self.origin,
 				xcm_instructions.clone(),
 				hash,
-				message_weight,
+				self.weight,
 				message_weight,
 			)
 			.ensure_complete()
@@ -197,11 +203,15 @@ pub mod pallet {
 			dest: MultiLocation,
 			max_weight: Option<XCMWeight>,
 		) -> DispatchResult {
+			log::trace!(target: "bridge_hub::xcm_config", "sygma xcm-bridge pallet::transfer sender:{:?}, asset: {:?}, dest: {:?}", sender, asset, dest);
+
 			let origin_location: MultiLocation =
 				Junction::AccountId32 { network: None, id: sender }.into();
 
 			let (dest_location, recipient) =
 				Pallet::<T>::extract_dest(&dest).ok_or(Error::<T>::InvalidDestination)?;
+
+			log::trace!(target: "bridge_hub::xcm_config", "sygma xcm-bridge pallet::transfer dest_location:{:?}, recipient: {:?}", dest_location, recipient);
 
 			ensure!(
 				T::MinXcmFee::get()
@@ -218,6 +228,8 @@ pub mod pallet {
 				.unwrap();
 			let min_fee_to_dest: MultiAsset = (asset.id, fee_per_asset).into();
 
+			log::trace!(target: "bridge_hub::xcm_config", "sygma xcm-bridge pallet::transfer min_fee_to_dest:{:?}, origin_location: {:?}, dest: {:?}, recipient: {:?}", min_fee_to_dest, origin_location, dest_location, recipient);
+
 			let xcm = XcmObject::<T> {
 				asset: asset.clone(),
 				fee: min_fee_to_dest,
@@ -230,6 +242,8 @@ pub mod pallet {
 
 			let mut msg = xcm.create_instructions()?;
 			xcm.execute_instructions(&mut msg)?;
+
+			log::trace!(target: "bridge_hub::xcm_config", "sygma xcm-bridge pallet::transfer after execute_instructions====");
 
 			Pallet::<T>::deposit_event(Event::XCMTransferSend {
 				asset: Box::new(asset),

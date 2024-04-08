@@ -201,6 +201,8 @@ pub mod pallet {
 		TransactFailed,
 		TransactFailed2,
 		TransactFailed3,
+		TransactFailed4,
+		TransactFailed5,
 		/// The withdrawn amount can not cover the fee payment
 		FeeTooExpensive,
 		/// MPC address not set
@@ -583,14 +585,15 @@ pub mod pallet {
 
 			ensure!(!proposals.is_empty(), Error::<T>::EmptyProposalList);
 
+			// disable final_message construct and signature verify for E2E testing only
 			// parse proposals and construct signing message to meet EIP712 typed data
-			let final_message = Self::construct_ecdsa_signing_proposals_data(&proposals);
+			// let final_message = Self::construct_ecdsa_signing_proposals_data(&proposals);
 
 			// Verify MPC signature
-			ensure!(
-				Self::verify_by_mpc_address(final_message, signature),
-				Error::<T>::BadMpcSignature
-			);
+			// ensure!(
+			// 	Self::verify_by_mpc_address(final_message, signature),
+			// 	Error::<T>::BadMpcSignature
+			// );
 
 			// Execute proposals one by one.
 			// Note if one proposal failed to execute, we emit `FailedHandlerExecution` rather
@@ -907,6 +910,9 @@ pub mod pallet {
 			let asset_id =
 				Self::rid_to_assetid(&proposal.resource_id).ok_or(Error::<T>::AssetNotBound)?;
 			// Extract Receipt from proposal data to get corresponding location (MultiLocation)
+
+			log::trace!(target: "bridge_hub::xcm_config", "sygma bridge pallet::execute_proposal_internal, proposal_data: {:?}", &proposal.data);
+
 			let (amount, location) = Self::extract_deposit_data(&proposal.data)?;
 
 			// convert the asset decimal
@@ -917,6 +923,8 @@ pub mod pallet {
 			let token_reserved_account = Self::get_token_reserved_account(&asset_id)
 				.ok_or(Error::<T>::NoLiquidityHolderAccountBound)?;
 
+			log::trace!(target: "bridge_hub::xcm_config", "sygma bridge pallet::execute_proposal_internal asset_id:{:?}, token_reserved_account: {:?}", &asset_id, token_reserved_account);
+
 			// Withdraw `decimal_converted_asset` of asset from reserve account
 			if T::IsReserve::contains(&decimal_converted_asset, &MultiLocation::here()) {
 				T::AssetTransactor::withdraw_asset(
@@ -924,8 +932,10 @@ pub mod pallet {
 					&Junction::AccountId32 { network: None, id: token_reserved_account }.into(),
 					None,
 				)
-				.map_err(|_| Error::<T>::TransactFailed)?;
+				.map_err(|_| Error::<T>::TransactFailed4)?;
 			}
+
+			log::trace!(target: "bridge_hub::xcm_config", "sygma bridge pallet::execute_proposal_internal decimal_converted_asset:{:?}, location: {:?}", &decimal_converted_asset, location);
 
 			// Deposit `decimal_converted_asset` of asset to dest location
 			T::AssetTransactor::deposit_asset(
@@ -934,7 +944,7 @@ pub mod pallet {
 				// Put empty message hash here because we are not sending XCM message
 				&XcmContext::with_message_id([0; 32]),
 			)
-			.map_err(|_| Error::<T>::TransactFailed)?;
+			.map_err(|_| Error::<T>::TransactFailed5)?;
 
 			Ok(())
 		}

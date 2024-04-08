@@ -39,6 +39,7 @@ use sp_runtime::{
 	ApplyExtrinsicResult,AccountId32
 };
 use hex_literal::hex;
+use log::log;
 
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -763,6 +764,9 @@ pub struct ReserveChecker;
 impl ContainsPair<MultiAsset, MultiLocation> for ReserveChecker {
 	fn contains(asset: &MultiAsset, origin: &MultiLocation) -> bool {
 		if let Some(ref id) = ConcrateSygmaAsset::origin(asset) {
+
+			log::trace!(target: "xcm::contains", "Bridge hub: ReserveChecker::contains id: {:?}, origin: {:?}", id, origin);
+
 			if id == origin {
 				return true;
 			}

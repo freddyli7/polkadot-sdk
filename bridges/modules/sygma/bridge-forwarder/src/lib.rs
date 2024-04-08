@@ -43,7 +43,9 @@ pub mod pallet {
 			what: MultiAsset,
 			dest: MultiLocation,
 		) -> DispatchResult {
-			let cap_weight: Weight = Weight::from_parts(6_000_000_000u64, 2_000_000u64);
+			log::trace!(target: "bridge_hub::xcm_config", "xcm_transactor_forwarder what:{:?}, dest: {:?}", what, dest);
+
+			let cap_weight: Weight = Weight::from_all(u64::MAX);
 			T::XCMBridge::transfer(origin, what.clone(), dest, Some(cap_weight))?;
 
 			let origin_location: MultiLocation =

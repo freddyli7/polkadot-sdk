@@ -68,8 +68,8 @@ parameter_types! {
 	pub const MaxInstructions: u32 = 100;
 	pub const MaxAssetsIntoHolding: u32 = 64;
 	pub SelfLocation: MultiLocation = MultiLocation::new(1, X1(Parachain(ParachainInfo::parachain_id().into())));
-	// set 1 token as min fee
-	pub MinXcmFee: Vec<(XcmAssetId, u128)> = vec![(NativeLocation::get().into(), 1_000_000_000_000u128)];
+	// set 0.001 token as min fee
+	pub MinXcmFee: Vec<(XcmAssetId, u128)> = vec![(NativeLocation::get().into(), 1_000_000_000u128), (UsdcLocation::get().into(), 1_000_000_000u128)];
 }
 
 pub struct RelayNetwork;
@@ -464,6 +464,9 @@ impl<T: Get<ParaId>> AssetTypeIdentifier for NativeAssetTypeIdentifier<T> {
 		// currently there are two multilocations are considered as native asset:
 		// 1. integrated parachain native asset(MultiLocation::here())
 		// 2. other parachain native asset(MultiLocation::new(1, X1(Parachain(1013)))), 1013 is the bridge hub parachainID in this case
+
+		log::trace!(target: "xcm::contains", "Bridge hub: NativeAssetTypeIdentifier::is_native_asset asset: {:?}", asset);
+
 		let native_locations =
 			[MultiLocation::here(), MultiLocation::new(1, X1(Parachain(T::get().into())))];
 

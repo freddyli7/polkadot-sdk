@@ -28,7 +28,7 @@ use assets_common::{
 };
 use frame_support::{
 	match_types, parameter_types,
-	traits::{ConstU32, Contains, Everything, Nothing, PalletInfoAccess},
+	traits::{ConstU32, Contains, Everything, Nothing, PalletInfoAccess, ContainsPair},
 };
 use frame_system::EnsureRoot;
 use pallet_xcm::XcmPassthrough;
@@ -513,7 +513,7 @@ impl xcm_executor::Config for XcmConfig {
 	// Asset Hub Kusama does not recognize a reserve location for any asset. This does not prevent
 	// Asset Hub acting _as_ a reserve location for KSM and assets created under `pallet-assets`.
 	// For KSM, users must use teleport where allowed (e.g. with the Relay Chain).
-	type IsReserve = ();
+	type IsReserve = AssetOriginFilter;
 	// We allow:
 	// - teleportation of KSM
 	// - teleportation of sibling parachain's assets (as ForeignCreators)
@@ -556,6 +556,45 @@ impl xcm_executor::Config for XcmConfig {
 	type CallDispatcher = WithOriginFilter<SafeCallFilter>;
 	type SafeCallFilter = SafeCallFilter;
 	type Aliasers = Nothing;
+}
+
+pub struct AssetOriginFilter;
+impl ContainsPair<MultiAsset, MultiLocation> for AssetOriginFilter {
+	fn contains(asset: &MultiAsset, origin: &MultiLocation) -> bool {
+		if let Some(ref id) = ConcrateAsset::origin(asset) {
+			if id == origin {
+				return true;
+			}
+		}
+		false
+	}
+}
+
+pub struct ConcrateAsset;
+impl ConcrateAsset {
+	pub fn id(asset: &MultiAsset) -> Option<MultiLocation> {
+		match (&asset.id, &asset.fun) {
+			// So far our native asset is concrete
+			(Concrete(id), Fungible(_)) => Some(id.clone()),
+			_ => None,
+		}
+	}
+
+	pub fn origin(asset: &MultiAsset) -> Option<MultiLocation> {
+		Self::id(asset).and_then(|id| {
+			match (id.parents, id.first_interior()) {
+				// Sibling parachain
+				(1, Some(Parachain(id))) => Some(MultiLocation::new(1, X1(Parachain(*id)))),
+				// Parent
+				(1, _) => Some(MultiLocation::parent()),
+				// Children parachain
+				(0, Some(Parachain(id))) => Some(MultiLocation::new(0, X1(Parachain(*id)))),
+				// Local: (0, Here)
+				(0, None) => Some(id),
+				_ => None,
+			}
+		})
+	}
 }
 
 /// Converts a local signed origin into an XCM multilocation.

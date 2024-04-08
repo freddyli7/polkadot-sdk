@@ -27,9 +27,9 @@ impl<
 	// 2. recipient is on non-substrate chain(evm, cosmos, etc.)
 	// 3. recipient is on the remote parachain
 	fn deposit_asset(what: &MultiAsset, who: &MultiLocation, context: &XcmContext) -> XcmResult {
-		match (who.parents, who.first_interior()) {
+		match (who.parents, who.interior) {
 			// 1. recipient is on the local parachain
-			(0, Some(AccountId32 { .. })) | (0, Some(AccountKey20 { .. })) => {
+			(0, X1(AccountId32 { .. })) | (0, X1(AccountKey20 { .. })) | (1, X1(Parachain(_))) => {
 				log::trace!(target: "bridge_hub::xcm_config", "sygma::xcm-asset-transactor, deposit_asset recipient is on the local parachain");
 				// check if the asset is native, and call the corresponding deposit_asset()
 				if AssetTypeChecker::is_native_asset(what) {
@@ -61,7 +61,7 @@ impl<
                     }
 					// 3. recipient is on remote parachain, will forward to xcm bridge pallet
                     _ => {
-						log::trace!(target: "sygma::xcm-asset-transactor", "sygma::xcm-asset-transactor deposit_asset recipient is on the remote parachain {:?}", who.interior);
+						log::trace!(target: "bridge_hub::xcm_config", "sygma::xcm-asset-transactor deposit_asset recipient is on the remote parachain who:{:?}, what: {:?}", who, what);
 
 						// xcm message must have a sender(origin), so a tmp account derived from pallet would be necessary here
                         let tmp_account = sp_io::hashing::blake2_256(&MultiLocation::new(0, X1(GeneralKey { length: 8, data: [2u8; 32] })).encode());
@@ -89,8 +89,12 @@ impl<
 		maybe_context: Option<&XcmContext>,
 	) -> Result<Assets, XcmError> {
 		let assets = if AssetTypeChecker::is_native_asset(what) {
+			log::trace!(target: "bridge_hub::xcm_config", "withdraw_asset CurrencyTransactor what:{:?}, who: {:?}", what, who);
+
 			CurrencyTransactor::withdraw_asset(what, who, maybe_context)?
 		} else {
+			log::trace!(target: "bridge_hub::xcm_config", "withdraw_asset FungiblesTransactor what:{:?}, who: {:?}", what, who);
+
 			FungiblesTransactor::withdraw_asset(what, who, maybe_context)?
 		};
 
