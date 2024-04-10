@@ -224,7 +224,22 @@ impl<
 		log::trace!(target: "xcm::weight", "UsingComponents::buy_weight weight: {:?}, payment: {:?}, context: {:?}", weight, payment, context);
 		let amount = WeightToFee::weight_to_fee(&weight);
 		let u128_amount: u128 = amount.try_into().map_err(|_| XcmError::Overflow)?;
-		let required = (Concrete(AssetId::get()), u128_amount).into();
+
+		let mut asset: MultiLocation = MultiLocation::parent().into();
+		for (k, v) in &payment.fungible { // assume there will be only one asset in the payment
+			log::trace!(target: "xcm::execute_xcm_in_credit","BuyExecution=========  payment_assetID: {:?}, payment_amount: {:?}", k, v);
+			match k {
+				Concrete(location) => { asset = *location }
+				Abstract(_) => {}
+			}
+		}
+
+		log::trace!(target: "xcm::weight", "UsingComponents::buy_weight u128_amount: {:?}", u128_amount);
+		// let required = (Concrete(MultiLocation::new(1, X3(Parachain(1000), PalletInstance(50), GeneralIndex(2000)))), u128_amount).into();
+		// let required = (Concrete(AssetId::get()), u128_amount).into();
+		// assuming there is only one asset in the payment so take the payment asset as the required
+		let required = (Concrete(asset), u128_amount).into();
+		log::trace!(target: "xcm::weight", "UsingComponents::buy_weight required: {:?}", required);
 		let unused = payment.checked_sub(required).map_err(|_| XcmError::TooExpensive)?;
 		self.0 = self.0.saturating_add(weight);
 		self.1 = self.1.saturating_add(amount);

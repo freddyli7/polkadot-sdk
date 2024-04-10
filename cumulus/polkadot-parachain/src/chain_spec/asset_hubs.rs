@@ -280,6 +280,8 @@ pub fn asset_hub_kusama_development_config() -> AssetHubKusamaChainSpec {
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_collator_keys_from_seed::<AuraId>("Alice"),
 				)],
+				// root account
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -323,6 +325,8 @@ pub fn asset_hub_kusama_local_config() -> AssetHubKusamaChainSpec {
 						get_collator_keys_from_seed::<AuraId>("Bob"),
 					),
 				],
+				// root account
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				vec![
 					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -390,6 +394,8 @@ pub fn asset_hub_kusama_config() -> AssetHubKusamaChainSpec {
 							.unchecked_into(),
 					),
 				],
+				// root account
+				get_account_id_from_seed::<sr25519::Public>("Alice"),
 				Vec::new(),
 				1000.into(),
 			)
@@ -405,6 +411,7 @@ pub fn asset_hub_kusama_config() -> AssetHubKusamaChainSpec {
 
 fn asset_hub_kusama_genesis(
 	invulnerables: Vec<(AccountId, AuraId)>,
+	root_key: AccountId,
 	endowed_accounts: Vec<AccountId>,
 	id: ParaId,
 ) -> asset_hub_kusama_runtime::RuntimeGenesisConfig {
@@ -421,6 +428,10 @@ fn asset_hub_kusama_genesis(
 				.cloned()
 				.map(|k| (k, ASSET_HUB_KUSAMA_ED * 524_288))
 				.collect(),
+		},
+		sudo: asset_hub_kusama_runtime::SudoConfig {
+			// Assign network admin rights.
+			key: Some(root_key),
 		},
 		parachain_info: asset_hub_kusama_runtime::ParachainInfoConfig {
 			parachain_id: id,

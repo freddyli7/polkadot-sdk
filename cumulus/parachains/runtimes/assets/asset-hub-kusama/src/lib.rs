@@ -42,6 +42,7 @@ use sp_runtime::{
 	transaction_validity::{TransactionSource, TransactionValidity},
 	ApplyExtrinsicResult, Permill,
 };
+use xcm::prelude::{GeneralKey, Concrete, Junction, Fungible, GlobalConsensus, Parachain, GeneralIndex, PalletInstance, XcmError, X1, X2, X3};
 
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -435,6 +436,8 @@ parameter_types! {
 	pub const AnnouncementDepositFactor: Balance = deposit(0, 66);
 	pub const MaxPending: u16 = 32;
 }
+
+// pub type AssetId = u32;
 
 /// The type used to represent the kinds of proxying allowed.
 #[derive(
@@ -862,10 +865,18 @@ construct_runtime!(
 		PoolAssets: pallet_assets::<Instance3>::{Pallet, Call, Storage, Event<T>} = 55,
 		AssetConversion: pallet_asset_conversion::{Pallet, Call, Storage, Event<T>} = 56,
 
+		Sudo: pallet_sudo = 66,
+
 		#[cfg(feature = "state-trie-version-1")]
 		StateTrieMigration: pallet_state_trie_migration = 70,
 	}
 );
+
+impl pallet_sudo::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Runtime>;
+}
 
 /// The address format for describing accounts.
 pub type Address = sp_runtime::MultiAddress<AccountId, ()>;

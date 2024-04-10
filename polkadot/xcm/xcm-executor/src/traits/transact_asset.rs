@@ -152,7 +152,7 @@ impl TransactAsset for Tuple {
 	fn can_check_in(origin: &MultiLocation, what: &MultiAsset, context: &XcmContext) -> XcmResult {
 		for_tuples!( #(
 			match Tuple::can_check_in(origin, what, context) {
-				Err(XcmError::AssetNotFound) | Err(XcmError::Unimplemented) => (),
+				Err(XcmError::AssetNotFound) | Err(XcmError::Unimplemented4) => (),
 				r => return r,
 			}
 		)* );
@@ -175,7 +175,7 @@ impl TransactAsset for Tuple {
 	fn can_check_out(dest: &MultiLocation, what: &MultiAsset, context: &XcmContext) -> XcmResult {
 		for_tuples!( #(
 			match Tuple::can_check_out(dest, what, context) {
-				Err(XcmError::AssetNotFound) | Err(XcmError::Unimplemented) => (),
+				Err(XcmError::AssetNotFound) | Err(XcmError::Unimplemented5) => (),
 				r => return r,
 			}
 		)* );
@@ -198,7 +198,7 @@ impl TransactAsset for Tuple {
 	fn deposit_asset(what: &MultiAsset, who: &MultiLocation, context: &XcmContext) -> XcmResult {
 		for_tuples!( #(
 			match Tuple::deposit_asset(what, who, context) {
-				Err(XcmError::AssetNotFound) | Err(XcmError::Unimplemented) => (),
+				Err(XcmError::AssetNotFound) | Err(XcmError::Unimplemented3) => (),
 				r => return r,
 			}
 		)* );
@@ -219,7 +219,7 @@ impl TransactAsset for Tuple {
 	) -> Result<Assets, XcmError> {
 		for_tuples!( #(
 			match Tuple::withdraw_asset(what, who, maybe_context) {
-				Err(XcmError::AssetNotFound) | Err(XcmError::Unimplemented) => (),
+				Err(XcmError::AssetNotFound) | Err(XcmError::Unimplemented2) => (),
 				r => return r,
 			}
 		)* );
@@ -241,7 +241,7 @@ impl TransactAsset for Tuple {
 	) -> Result<Assets, XcmError> {
 		for_tuples!( #(
 			match Tuple::internal_transfer_asset(what, from, to, context) {
-				Err(XcmError::AssetNotFound) | Err(XcmError::Unimplemented) => (),
+				Err(XcmError::AssetNotFound) | Err(XcmError::Unimplemented6) => (),
 				r => return r,
 			}
 		)* );

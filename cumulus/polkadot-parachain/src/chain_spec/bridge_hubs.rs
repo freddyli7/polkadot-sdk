@@ -234,6 +234,8 @@ pub mod rococo {
 							get_collator_keys_from_seed::<AuraId>("Bob"),
 						),
 					],
+					// root account
+					get_account_id_from_seed::<sr25519::Public>("Alice"),
 					vec![
 						get_account_id_from_seed::<sr25519::Public>("Alice"),
 						get_account_id_from_seed::<sr25519::Public>("Bob"),
@@ -265,6 +267,7 @@ pub mod rococo {
 
 	fn genesis(
 		invulnerables: Vec<(AccountId, AuraId)>,
+		root_key: AccountId,
 		endowed_accounts: Vec<AccountId>,
 		id: ParaId,
 		bridges_pallet_owner: Option<AccountId>,
@@ -278,6 +281,10 @@ pub mod rococo {
 			},
 			balances: bridge_hub_rococo_runtime::BalancesConfig {
 				balances: endowed_accounts.iter().cloned().map(|k| (k, 1 << 60)).collect(),
+			},
+			sudo: bridge_hub_rococo_runtime::SudoConfig {
+				// Assign network admin rights.
+				key: Some(root_key),
 			},
 			parachain_info: bridge_hub_rococo_runtime::ParachainInfoConfig {
 				parachain_id: id,

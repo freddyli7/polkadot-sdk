@@ -138,6 +138,11 @@ pub enum Error {
 	/// An asset cannot be deposited, probably because (too much of) it already exists.
 	#[codec(index = 34)]
 	NotDepositable,
+	Unimplemented2,
+	Unimplemented3,
+	Unimplemented4,
+	Unimplemented5,
+	Unimplemented6,
 
 	// Errors that happen prior to instructions being executed. These fall outside of the XCM
 	// spec.
@@ -367,14 +372,23 @@ pub trait ExecuteXcm<Call> {
 		weight_limit: Weight,
 		weight_credit: Weight,
 	) -> Outcome {
-		let pre = match Self::prepare(message) {
+		log::debug!(target: "xcm::execute_xcm","execute_xcm_in_credit here ??? 1");
+
+		let pre = match Self::prepare(message.clone()) {
 			Ok(x) => x,
 			Err(_) => return Outcome::Error(Error::WeightNotComputable),
 		};
+		log::debug!(target: "xcm::execute_xcm","execute_xcm_in_credit here ??? 2"); // executed
+
 		let xcm_weight = pre.weight_of();
 		if xcm_weight.any_gt(weight_limit) {
+			log::debug!(target: "xcm::execute_xcm","execute_xcm_in_credit here ??? 3, xcm_weight: {:?}, weight_limit: {:?}", xcm_weight, weight_limit);
+
 			return Outcome::Error(Error::WeightLimitReached(xcm_weight))
 		}
+
+		log::debug!(target: "xcm::execute_xcm","execute_xcm_in_credit message: {:?}, weight_limit: {:?}, weight_credit: {:?}", message, weight_limit, weight_credit); // not executed here
+
 		Self::execute(origin, pre, &mut hash, weight_credit)
 	}
 

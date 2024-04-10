@@ -51,7 +51,7 @@ sp-std = { path = "../../primitives/std", default-features = false}
 [dev-dependencies]
 array-bytes = "6.1"
 assert_matches = "1"
-env_logger = "0.9"
+env_logger = "0.10.2"
 pretty_assertions = "1"
 wat = "1"
 

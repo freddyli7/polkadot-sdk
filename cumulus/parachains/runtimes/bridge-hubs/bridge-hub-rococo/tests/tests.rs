@@ -22,7 +22,8 @@ use bridge_hub_rococo_runtime::{
 	xcm_config::{RelayNetwork, XcmConfig},
 	AllPalletsWithoutSystem, BridgeRejectObsoleteHeadersAndMessages, DeliveryRewardInBalance,
 	Executive, ExistentialDeposit, ParachainSystem, PolkadotXcm, RequiredStakeForStakeAndSlash,
-	Runtime, RuntimeCall, RuntimeEvent, SessionKeys, SignedExtra, UncheckedExtrinsic,
+	Runtime, RuntimeCall, RuntimeEvent, SessionKeys, SignedExtra, UncheckedExtrinsic, BridgeAccountNative,
+	SygmaBridgeFeeAccount
 };
 use codec::{Decode, Encode};
 use frame_support::parameter_types;
@@ -331,6 +332,18 @@ mod bridge_hub_wococo_tests {
 			|| (DeliveryRewardInBalance::key().to_vec(), DeliveryRewardInBalance::get()),
 			|old_value| old_value.checked_mul(2).unwrap(),
 		)
+	}
+
+	#[test]
+	fn bridge_hub_print_checking_account_of_FungiblesTransactor() {
+		println!("bridge hub FungiblesTransactor CheckingAccount: {:?}", CheckingAccount::get());
+		println!("bridge hub FungiblesTransactor BridgeAccountNative: {:?}", BridgeAccountNative::get());
+		println!("bridge hub FungiblesTransactor SygmaBridgeFeeAccount: {:?}", SygmaBridgeFeeAccount::get());
+		// let origin_location: AccountId32 = AccountId32::new( [109, 111, 100, 108, 115, 121, 103, 109, 97, 47, 48, 49, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]); // native token reserved account
+		let origin_location: AccountId32 = AccountId32::new( [109, 111, 100, 108, 115, 121, 103, 109, 97, 47, 48, 49, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] ); // other token reserved account
+		// let origin_location: AccountId32 = AccountId32::new([212, 53, 147, 199, 21, 253, 211, 28, 97, 20, 26, 189, 4, 169, 159, 214, 130, 44, 133, 88, 133, 76, 205, 227, 154, 86, 132, 231, 165, 109, 162, 125]);
+		// let origin_location: AccountId32 = AccountId32::new([102u8; 32]);
+		println!("===== account: {:?}", origin_location);
 	}
 
 	#[test]

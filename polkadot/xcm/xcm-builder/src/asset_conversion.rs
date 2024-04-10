@@ -37,6 +37,32 @@ impl<
 {
 	fn convert(id: &MultiLocation) -> Option<AssetId> {
 		let prefix = Prefix::get();
+
+		// hardcode the BHN and USDC token multilocation and assetid for demo integration purpose
+		// Bridge hub parachain native token
+		let bridge_hub_native_asset_location: MultiLocation = MultiLocation::new(
+			1,
+			X1(
+				Parachain(1013),
+			),
+		);
+		let bridge_hub_native_asset_id: AssetId = ConvertAssetId::convert(&2003).unwrap();
+		let usdc_asset_location: MultiLocation = MultiLocation::new(
+			1,
+			X3(
+				Parachain(1000),
+				PalletInstance(50),
+				GeneralIndex(2000),
+			),
+		);
+		let usdc_asset_id: AssetId = ConvertAssetId::convert(&2000).unwrap();
+		if id == &bridge_hub_native_asset_location {
+			return Some(bridge_hub_native_asset_id)
+		}
+		if id == &usdc_asset_location {
+			return Some(usdc_asset_id)
+		}
+
 		if prefix.parent_count() != id.parent_count() ||
 			prefix
 				.interior()
@@ -161,8 +187,29 @@ impl<
 	for MatchedConvertedConcreteId<AssetId, Balance, MatchAssetId, ConvertAssetId, ConvertBalance>
 {
 	fn matches_fungibles(a: &MultiAsset) -> result::Result<(AssetId, Balance), MatchError> {
+		// hardcode the BHN token multilocation for demo imtegration purpose
+		// Bridge hub parachain native token
+		// in this integration demo, we treat Native asset of other parachain as Asset, not Balance
+		let bridge_hub_native_asset_location: MultiLocation = MultiLocation::new(
+			1,
+			X1(
+				Parachain(1013),
+			),
+		);
+		// USDC foreign token
+		let usdc_asset_location: MultiLocation = MultiLocation::new(
+			1,
+			X3(
+				Parachain(1000),
+				PalletInstance(50),
+				GeneralIndex(2000),
+			),
+		);
+
 		let (amount, id) = match (&a.fun, &a.id) {
 			(Fungible(ref amount), Concrete(ref id)) if MatchAssetId::contains(id) => (amount, id),
+			(Fungible(ref amount), Concrete(ref id)) if id == &bridge_hub_native_asset_location => (amount, &bridge_hub_native_asset_location) ,
+			(Fungible(ref amount), Concrete(ref id)) if id == &usdc_asset_location => (amount, &usdc_asset_location) ,
 			_ => return Err(MatchError::AssetNotHandled),
 		};
 		let what = ConvertAssetId::convert(id).ok_or(MatchError::AssetIdConversionFailed)?;
